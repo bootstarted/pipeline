@@ -7,6 +7,7 @@ defmodule Pipeline.Interpreter.Conn do
   possible in compilation, because the connection is not available.
   """
 
+  import Effects, only: [queue_apply: 2]
   alias Effects.Pure
   alias Effects.Effect
   alias Pipeline.Effects
@@ -38,21 +39,21 @@ defmodule Pipeline.Interpreter.Conn do
     {_, pipeline} = patterns |> Enum.find(fn {guard, _} ->
       nil # TODO!
     end)
-    nil |> effect(next.(entry))
+    nil |> effect(queue_apply(next, entry))
   end
 
   @doc """
   kek.
   """
-  defp effect(state, %Effect{
+  defp effect({value, conn}, %Effect{
     effect: %Effects.Plug{plug: plug, options: options} = entry,
     next: next,
   }) do
-    case apply(plug, :call, plug.init(options)) do
+    case apply(plug, :call, [conn, plug.init(options)]) do
       # TODO Should this case be explicity checked for? It's fairly specific
       # to plug. Should we check the result of this function returns plugs?
-      %{halted: true} = conn -> conn
-      _ = conn -> state |> effect(next.(entry))
+      %{halted: true} = conn -> {value, conn}
+      _ = conn -> {value, conn} |> effect(queue_apply(next, entry))
     end
   end
 
