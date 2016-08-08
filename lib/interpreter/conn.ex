@@ -7,19 +7,21 @@ defmodule Pipeline.Interpreter.Conn do
   possible in compilation, because the connection is not available.
   """
 
+  alias Effects.Pure
+  alias Effects.Effect
   alias Pipeline.Effects
 
   @doc """
   Derp.
   """
-  defp effect({_, conn}, %Free.Pure{value: value}) do
+  defp effect({_, conn}, %Pure{value: value}) do
     {value, conn}
   end
 
   @doc """
   Derp.
   """
-  defp effect({value, conn}, %Free.Impure{
+  defp effect({value, conn}, %Effect{
     effect: %Effects.Halt{} = entry,
     next: next,
   }) do
@@ -29,7 +31,7 @@ defmodule Pipeline.Interpreter.Conn do
   @doc """
   Herp.
   """
-  defp effect({value, conn}, %Free.Impure{
+  defp effect({value, conn}, %Effect{
     effect: %Effects.Match{patterns: patterns} = entry,
     next: next,
   }) do
@@ -42,14 +44,15 @@ defmodule Pipeline.Interpreter.Conn do
   @doc """
   kek.
   """
-  defp effect(state, %Free.Impure{
+  defp effect(state, %Effect{
     effect: %Effects.Plug{plug: plug, options: options} = entry,
     next: next,
   }) do
     case apply(plug, :call, plug.init(options)) do
-      %Plug.Conn{halted: true} = conn -> conn
-      %Plug.Conn{} = conn -> state |> effect(next.(entry))
-      _ -> raise unquote("Must return a plug connection.")
+      # TODO Should this case be explicity checked for? It's fairly specific
+      # to plug. Should we check the result of this function returns plugs?
+      %{halted: true} = conn -> conn
+      _ = conn -> state |> effect(next.(entry))
     end
   end
 

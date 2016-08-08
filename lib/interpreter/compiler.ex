@@ -1,10 +1,14 @@
 defmodule Pipeline.Interpreter.Compiler do
   @moduledoc """
   Convert a pipeline into an elixir AST.
+
   Because the plug chain is stored as essentially an abstract syntax tree we
   can perform any number of optimizations on it.
   """
 
+  import Effects, only: [queue_apply: 2]
+  alias Effects.Pure
+  alias Effects.Effect
   alias Pipeline.Effects
 
   defp convert(target, plug, options) when is_atom(plug) do
@@ -28,16 +32,15 @@ defmodule Pipeline.Interpreter.Compiler do
   @doc """
   Derp.
   """
-  defp effect({_, compilation}, %Free.Pure{value: value}) do
+  defp effect({_, compilation}, %Pure{value: value}) do
     {value, compilation}
   end
 
   @doc """
   Derp.
   """
-  defp effect({value, compilation}, %Free.Impure{
+  defp effect({value, compilation}, %Effect{
     effect: %Effects.Halt{} = entry,
-    next: next,
   }) do
     {entry, compilation}
   end
@@ -45,11 +48,11 @@ defmodule Pipeline.Interpreter.Compiler do
   @doc """
   Herp.
   """
-  defp effect(state, %Free.Impure{
+  defp effect(state, %Effect{
     effect: %Effects.Match{patterns: patterns} = entry,
     next: next,
   }) do
-    {value, compilation} = state |> effect(next.(entry))
+    {value, compilation} = state |> effect(queue_apply(next, entry))
     {entry, {:cond, [], [[do: patterns |> Enum.map(fn {guard, pipeline} ->
       {:->, [], [[true], compilation |> compile(pipeline)]}
     end)]]}}
@@ -58,7 +61,7 @@ defmodule Pipeline.Interpreter.Compiler do
   @doc """
   wop.
   """
-  defp effect(state, %Free.Impure{
+  defp effect(state, %Effect{
     effect: %Effects.Error{handler: handler} = entry,
     next: next,
   }) do
@@ -71,19 +74,19 @@ defmodule Pipeline.Interpreter.Compiler do
       catch
         unquote(foo) -> unquote(bar)
       end
-    end} |> effect(next.(entry))
+    end} |> effect(queue_apply(next, entry))
   end
 
   @doc """
   kek.
   """
-  defp effect(state, %Free.Impure{
+  defp effect(state, %Effect{
     effect: %Effects.Plug{plug: plug, options: options} = entry,
     next: next,
   }) do
     {value, target} = state
     foo = quote do: x
-    {_, compilation} = {value, foo} |> effect(next.(entry))
+    {_, compilation} = {value, foo} |> effect(queue_apply(next, entry))
     {entry, quote do
       case unquote(convert(target, plug, options)) do
         %Plug.Conn{halted: true} = x -> x
@@ -91,6 +94,10 @@ defmodule Pipeline.Interpreter.Compiler do
         _ -> raise unquote("Must return a plug connection.")
       end
     end}
+  end
+
+  defp effect(_, effect) do
+    raise "Expected valid pipeline effect object, but got #{inspect effect}."
   end
 
   @doc """

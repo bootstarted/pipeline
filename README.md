@@ -385,5 +385,11 @@ Because pipeline is backed by [effects], one only needs to change the pipeline i
 
 Plug makes extensive use of Elixir's macro facility to ensure everything runs as fast as possible – pipeline is no different.
 
+## Testing
+
+Using [effects] means that testing pipelines is straightforward. Instead of using the connection interpreter or the compilation interpreter you can use one for testing that doesn't actually do anything.
+
+TODO: Show how.
+
 [effects]: https://github.com/metalabdesign/effects
 [plug]: https://github.com/elixir-lang/plug

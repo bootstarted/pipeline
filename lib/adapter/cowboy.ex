@@ -3,6 +3,37 @@ defmodule Pipeline.Adapter.Cowboy do
   Pretty much built off Plug's adapter, but simpler and supports the static
   optimization mechanisms provided by pipeline.
 
+  Invoking `use Pipeline.Adapter.Cowboy` will create a pipeline/1 function that
+  accepts cowboy connects to be run through the pipeline specified by the
+  pipeline parameter. This module should be used in your server process and
+  needs little more than that to be setup.
+
+  Your server, could for example, look like:
+
+  ```elixir
+  defmodule Server do
+    use Pipeline.Adapter.Cowboy, pipeline: Entry.pipeline
+  end
+  ```
+
+  Your supervisor should add your server as a worker:
+
+  ```elixir
+  children = [
+    # Start pipeline-based server.
+    worker(Server, [[port: 4000]]),
+  ]
+
+  You can configure your cowboy application with a number of other attributes.
+
+   * acceptors
+   * protocol
+   * port
+
+  Note that you do NOT need to use Plug connection objects to use this adapter,
+  though using any plug-based pipeline's will require it.
+  ```
+
   TODO: Add more options to be at feature-parity with Plug's adapter.
   """
 
@@ -28,8 +59,6 @@ defmodule Pipeline.Adapter.Cowboy do
     # the compiler because they have different contexts.
     conn = quote do: conn
     # Generate the compiled version of the application pipeline.
-    # TODO: Consider `pipeline ~> plug(maybe_send, __MODULE__)` as an option
-    # instead of hardcoding `maybe_send`?
     body = conn |> Compiler.compile(pipeline)
     # Inject it into the module as pipeline/1.
     quote do: def pipeline(unquote(conn)), do: unquote(body)
@@ -42,9 +71,6 @@ defmodule Pipeline.Adapter.Cowboy do
 
       # Default number of cowboy acceptors.
       @acceptors 100
-
-      # Default structure for the connection object.
-      @connection Plug.Adapters.Cowboy.Conn
 
       # ??? Copied from plug lol.
       @already_sent {:plug_conn, :sent}
@@ -82,11 +108,10 @@ defmodule Pipeline.Adapter.Cowboy do
         # Generate the Plug connection object from the request.
         conn = @connection.conn(req, transport)
         try do
-          %{adapter: {@connection, req}} = conn
           # Send the connection to be processed by the pipeline.
-          |> pipeline
-          # Do any last minute things.
-          |> maybe_send
+          # This function is generated in the current module through the
+          # `__before_compile__` macro.
+          %{adapter: {@connection, req}} = conn |> pipeline
           # Return the result back to cowboy.
           {:ok, req, [{:result, :ok} | env]}
         catch
@@ -112,32 +137,22 @@ defmodule Pipeline.Adapter.Cowboy do
         end
       end
 
-      defp maybe_send(%Plug.Conn{state: :unset}) do
-        raise Plug.Conn.NotSentError
-      end
-      defp maybe_send(%Plug.Conn{state: :set} = conn) do
-        Plug.Conn.send_resp(conn)
-      end
-      defp maybe_send(%Plug.Conn{} = conn) do
-        conn
-      end
-      defp maybe_send(other) do
-        raise "Cowboy adapter expected #{__MODULE__} to return Plug.Conn but got: #{inspect other}"
-      end
-
       defp terminate(reason, req, stack) do
         :cowboy_req.maybe_reply(stack, req)
         exit(reason)
       end
 
       defp dispatch() do
+        # Basically we ignore cowboy's routing mechanism and dispatch everything
+        # through our pipeline.
         :cowboy_router.compile([{:_, [
           {:_, __MODULE__, []},
         ]}])
       end
 
       @doc """
-      Bootstart the cowboy application.
+      Bootstart the cowboy application. Any of the given module attributes can
+      be overridden as parameters (e.g. port, scheme, etc.).
       """
       defp run(options \\ []) do
         ref = options |> Keyword.get(:ref, @ref)

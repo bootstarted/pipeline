@@ -4,7 +4,6 @@ defmodule Pipeline.Interpreter.Transform do
   pipeline being built up using the transformed existing pipeline.
   """
 
-  alias Pipeline.Effects
   import Pipeline
 
   defmodule Identity do
@@ -17,7 +16,7 @@ defmodule Pipeline.Interpreter.Transform do
     @doc """
 
     """
-    def effect(pipeline, %Free.Impure{
+    def effect(pipeline, %Effects.Effect{
       effect: effect,
       next: next,
     }) do
@@ -27,7 +26,7 @@ defmodule Pipeline.Interpreter.Transform do
     @doc """
 
     """
-    def effect(pipeline, %Free.Pure{
+    def effect(pipeline, %Effects.Pure{
       value: value,
     }) do
       nil
@@ -39,11 +38,11 @@ defmodule Pipeline.Interpreter.Transform do
     Insert debug logging statements between all parts of a pipeline.
     """
 
-    def log(%Effects.Plug{plug: plug, options: options}) do
+    def log(%Pipeline.Effects.Plug{plug: plug, options: options}) do
 
     end
 
-    def effect(pipeline, %Free.Impure{
+    def effect(pipeline, %Effects.Effect{
       effect: effect,
       next: next,
     }) do
@@ -56,8 +55,8 @@ defmodule Pipeline.Interpreter.Transform do
     Turn `plug(SomePlug, options)` into `SomePlug.pipeline(options)` for plugs
     which are pipelines. This is essentially an optimization pass resulting in less overhead.
     """
-    def effect(pipeline, %Free.Impure{
-      effect: %Effects.Plug{plug: plug, options: options} = entry,
+    def effect(pipeline, %Effects.Effect{
+      effect: %Pipeline.Effects.Plug{plug: plug, options: options} = entry,
       next: next,
     }) do
       case function_exported?(plug, :pipeline, 1) do

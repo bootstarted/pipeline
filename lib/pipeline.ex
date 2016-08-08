@@ -51,14 +51,14 @@ defmodule Pipeline do
 
   # Our effects are not really extensible since open-union types are not
   # possible here :(
-  @type e :: Effects.Plug.t | Effects.Match.t | Effects.Halt.t
-  @type t :: Free.t(e)
+  # @type e :: Effects.Plug.t | Effects.Match.t | Effects.Halt.t
+  # @type t :: Free.t(e)
 
   # ----------------------------------------------------------
   # Effect Creators
   # ----------------------------------------------------------
   defeffect plug(_plug, _options, _guards) do
-    raise ArgumentError, message: "Guards not supported by Pipeline."
+    raise ArgumentError, message: "Plug guards not supported by Pipeline."
   end
 
   @doc """
@@ -108,22 +108,22 @@ defmodule Pipeline do
   @doc """
   The ~>> operator.
   """
-  defdelegate ~>>, to: Free, as: ~>>
+  defdelegate a ~>> b, to: Elixir.Effects
 
   @doc """
   The ~> operator.
   """
-  defdelegate ~>, to: Free, as: ~>
+  defdelegate a ~> b, to: Elixir.Effects
 
   @doc """
 
   """
-  defdelegate fmap, to: Free, as: fmap
+  defdelegate fmap(a, b), to: Elixir.Effects
 
   @doc """
 
   """
-  defdelegate ap, to: Free, as: ap
+  defdelegate ap(a, b), to: Elixir.Effects
 
   # ----------------------------------------------------------
   # Other
