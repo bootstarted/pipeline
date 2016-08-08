@@ -1,4 +1,4 @@
-defmodule Pipeline.Router do
+defmodule Pipeline.Plug.Router do
   @moduledoc """
   Just like Plug's Router!
 

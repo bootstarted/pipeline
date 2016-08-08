@@ -1,4 +1,4 @@
-defmodule Pipeline.Util do
+defmodule Pipeline.Plug.Util do
   @doc """
   Set the contents of the response body. Unfortunately Plug has no function
   to do this natively (you're always forced to set the status too) so we have
