@@ -62,15 +62,10 @@ defmodule Pipeline.Plug.Import do
     |> Enum.map(fn {plug, _} -> plug end)
     |> Enum.each(&Module.put_attribute(env.module, :plugs, &1))
 
-    IO.inspect(Module.get_attribute(env.module, :plugs))
-
     # Inject the generated functions into the consumer module.
     updates
     |> Enum.map(fn {_, q} -> q end)
-    |> Enum.filter(fn x ->
-      IO.puts(Macro.to_string(x))
-      x
-    end)
+    |> Enum.filter(fn x -> x end)
 
   end
 end
