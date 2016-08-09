@@ -27,6 +27,20 @@ defmodule Pipeline.Mixfile do
     ],
   ] end
 
+  def application do [
+    applications: applications(Mix.env),
+  ] end
+
+  defp applications(:test) do [
+    :cowboy,
+    :httpoison,
+  ] end
+
+  defp applications(:dev) do [
+    :cowboy,
+    :httpoison,
+  ] end
+
   defp description do
     """
     Monadic HTTP application composition for plug and friends.
@@ -61,5 +75,9 @@ defmodule Pipeline.Mixfile do
     {:dogma, "~> 0.1.4", only: [:dev, :test]},
     # Documentation generation.
     {:ex_doc, "~> 0.13.0", only: [:dev]},
+    # Cowboy HTTP server.
+    {:cowboy, "~> 1.0.4", only: [:dev, :test]},
+    # HTTP requests during testing.
+    {:httpoison, "~> 0.9.0", only: [:dev, :test]},
   ] end
 end
