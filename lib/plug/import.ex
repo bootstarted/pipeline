@@ -11,6 +11,25 @@ defmodule Pipeline.Plug.Import do
 
   **IMPORTANT**: You must `use` this module _before_ you `use` anything from
   Plug, since it modifies the internal list of plugs.
+
+  ```elixir
+  defmodule SamplePipeline do
+    def pipeline(options) do
+      empty ~> Pipeline.plug(...)
+    end
+  end
+
+  defmodule PipelineConsumer do
+    # Needed for being able to call `plug some_pipeline`. This MUST come before
+    # any plug-related `use` calls.
+    use Pipeline.Plug.Import
+    # Needed for using the `plug` macro.
+    use Plug.Builder
+
+    # Access a pipeline as if it were a plug!
+    Plug.Builder.plug SamplePipeline
+  end
+  ```
   """
 
   alias Pipeline.Interpreter.Compiler
