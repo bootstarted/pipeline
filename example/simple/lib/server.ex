@@ -8,9 +8,11 @@ defmodule Server do
   # For `empty`, `~>`, and `plug`.
   import Pipeline
 
-  # Even though we're not using Plug's adapter, we're still using Plug's
+  # Even though we're _not_ using Plug's adapter, we're still using Plug's
   # connection object to pass around between stages. This ensures we can use
-  # other plugs.
+  # other plugs because that's the kind of object they will expect. If one
+  # wanted to not rely on Plug at all, a different kind of connection object
+  # could be provided.
   @connection Plug.Adapters.Cowboy.Conn
 
   # Generate all the necessary boilerplate.
